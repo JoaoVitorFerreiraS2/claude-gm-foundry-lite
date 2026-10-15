@@ -3,35 +3,47 @@
  * It can hold a "focused" document (from a sheet header button or the token HUD) with quick actions for it.
  * main.mjs wires the actions through ClaudePanel.handlers to avoid circular imports.
  */
+import { t } from "./i18n.mjs";
+
 const { ApplicationV2 } = foundry.applications.api;
 const { escapeHTML } = foundry.utils;
 
 const MAX_ENTRIES = 80;
 
-/** Quick actions offered for the focused document, by document type. */
-const QUICK_ACTIONS = {
-  Actor: [
-    ["Descrever", "Descreva este personagem como eu leria em voz alta aos jogadores (aparência, postura, primeira impressão)."],
-    ["Dar falas", "Escreva 5 falas curtas para este NPC, no tom e sotaque dele, para eu usar na sessão."],
-    ["Ajustar ao grupo", "Ajuste este NPC para ser um desafio adequado ao grupo atual (party_info): explique o que mudaria e aplique depois da minha aprovação."],
-    ["Melhorar biografia", "Melhore a biografia deste personagem mantendo o que já existe e o que as notas da campanha dizem sobre ele."]
-  ],
-  Item: [
-    ["Melhorar descrição", "Melhore a descrição deste item, com mais sabor e sem mudar as regras."],
-    ["Equilibrar", "Avalie se este item está equilibrado para o nível do grupo e sugira ajustes."]
-  ],
-  JournalEntry: [
-    ["Melhorar texto", "Melhore o texto deste diário, mantendo os fatos, com melhor formatação e ritmo."],
-    ["Resumir", "Resuma este diário em tópicos curtos para eu consultar durante a sessão."],
-    ["Versão dos jogadores", "Crie uma versão deste diário para os jogadores, sem segredos do Mestre, visível para todos."]
-  ],
-  Scene: [
-    ["Descrever cena", "Descreva esta cena em voz alta para os jogadores ao entrarem nela."],
-    ["Cena viva", "Dê vida a esta cena: clima, luzes, música ambiente e uma descrição para eu ler."]
-  ]
-};
-QUICK_ACTIONS.JournalEntryPage = QUICK_ACTIONS.JournalEntry;
-QUICK_ACTIONS.Token = QUICK_ACTIONS.Actor;
+/** Quick actions offered for the focused document, by document type: [label, prompt] pairs (localized). */
+function quickActions(documentName) {
+  const actor = () => [
+    [t("Panel.Quick.Actor.Describe"), t("Panel.Quick.Actor.DescribePrompt")],
+    [t("Panel.Quick.Actor.Lines"), t("Panel.Quick.Actor.LinesPrompt")],
+    [t("Panel.Quick.Actor.Scale"), t("Panel.Quick.Actor.ScalePrompt")],
+    [t("Panel.Quick.Actor.Biography"), t("Panel.Quick.Actor.BiographyPrompt")]
+  ];
+  const journal = () => [
+    [t("Panel.Quick.Journal.Improve"), t("Panel.Quick.Journal.ImprovePrompt")],
+    [t("Panel.Quick.Journal.Summarize"), t("Panel.Quick.Journal.SummarizePrompt")],
+    [t("Panel.Quick.Journal.PlayerVersion"), t("Panel.Quick.Journal.PlayerVersionPrompt")]
+  ];
+  switch ( documentName ) {
+    case "Actor":
+    case "Token":
+      return actor();
+    case "Item":
+      return [
+        [t("Panel.Quick.Item.Improve"), t("Panel.Quick.Item.ImprovePrompt")],
+        [t("Panel.Quick.Item.Balance"), t("Panel.Quick.Item.BalancePrompt")]
+      ];
+    case "JournalEntry":
+    case "JournalEntryPage":
+      return journal();
+    case "Scene":
+      return [
+        [t("Panel.Quick.Scene.Describe"), t("Panel.Quick.Scene.DescribePrompt")],
+        [t("Panel.Quick.Scene.Ideas"), t("Panel.Quick.Scene.IdeasPrompt")]
+      ];
+    default:
+      return [];
+  }
+}
 
 const storageKey = () => `claude-gm.${game.world.id}.panel`;
 
@@ -45,7 +57,7 @@ export class ClaudePanel extends ApplicationV2 {
     actions: {
       send: ClaudePanel.#onSend,
       stop: () => ClaudePanel.handlers.stop?.(),
-      undo: () => ClaudePanel.handlers.submit?.("desfazer"),
+      undo: () => ClaudePanel.handlers.submit?.("undo"),
       reset: () => ClaudePanel.handlers.submit?.("reset"),
       clearFocus: () => ClaudePanel.focus(null),
       quick: (event, target) => ClaudePanel.handlers.submit?.(target.dataset.prompt),
@@ -105,27 +117,27 @@ export class ClaudePanel extends ApplicationV2 {
     const busy = ClaudePanel.handlers.isBusy?.() ?? false;
     const entries = ClaudePanel.entries.map(e =>
       `<div class="claude-gm-entry ${e.role}">${e.role === "user" ? `<blockquote class="claude-gm-request">${e.html}</blockquote>` : e.html}</div>`
-    ).join("") || `<p class="claude-gm-empty">Peça algo sobre o mundo. Ex.: "monte um encontro médio de mortos-vivos" ou abra uma ficha e clique no robô do cabeçalho.</p>`;
+    ).join("") || `<p class="claude-gm-empty">${t("Panel.Empty")}</p>`;
     const f = ClaudePanel.focused;
-    const quick = f ? (QUICK_ACTIONS[f.documentName] ?? []).map(([label, prompt]) =>
+    const quick = f ? quickActions(f.documentName).map(([label, prompt]) =>
       `<button type="button" data-action="quick" data-prompt="${escapeHTML(prompt)}">${escapeHTML(label)}</button>`).join("") : "";
     const focus = f ? `
       <div class="claude-gm-focus">
         <span><i class="fa-solid fa-crosshairs"></i> ${escapeHTML(f.documentName)}: <b>${escapeHTML(f.name)}</b></span>
-        <a data-action="clearFocus" data-tooltip="Tirar o foco"><i class="fa-solid fa-xmark"></i></a>
+        <a data-action="clearFocus" data-tooltip="${escapeHTML(t("Panel.ClearFocus"))}"><i class="fa-solid fa-xmark"></i></a>
         <div class="claude-gm-quick">${quick}</div>
       </div>` : "";
     return `
       <div class="claude-gm claude-gm-log">${entries}</div>
       ${focus}
       <div class="claude-gm-input">
-        <textarea name="prompt" rows="3" placeholder="Enter envia, Shift+Enter quebra linha. Comece com ! para usar o modelo mais forte, ? para o rápido."></textarea>
+        <textarea name="prompt" rows="3" placeholder="${escapeHTML(t("Panel.Placeholder"))}"></textarea>
         <div class="claude-gm-buttons">
-          <button type="button" data-action="send"><i class="fa-solid fa-paper-plane"></i> ${busy ? "Pôr na fila" : "Enviar"}</button>
-          <button type="button" data-action="stop" ${busy ? "" : "disabled"}><i class="fa-solid fa-stop"></i> Parar</button>
-          <button type="button" data-action="undo" ${busy ? "disabled" : ""} data-tooltip="Desfazer o último pedido"><i class="fa-solid fa-rotate-left"></i></button>
-          <button type="button" data-action="reset" ${busy ? "disabled" : ""} data-tooltip="Nova conversa (o Claude esquece o contexto)"><i class="fa-solid fa-broom"></i></button>
-          <button type="button" data-action="clearLog" ${busy ? "disabled" : ""} data-tooltip="Limpar esta janela"><i class="fa-solid fa-eraser"></i></button>
+          <button type="button" data-action="send"><i class="fa-solid fa-paper-plane"></i> ${busy ? t("Panel.Queue") : t("Panel.Send")}</button>
+          <button type="button" data-action="stop" ${busy ? "" : "disabled"}><i class="fa-solid fa-stop"></i> ${t("Panel.Stop")}</button>
+          <button type="button" data-action="undo" ${busy ? "disabled" : ""} data-tooltip="${escapeHTML(t("Panel.UndoTip"))}"><i class="fa-solid fa-rotate-left"></i></button>
+          <button type="button" data-action="reset" ${busy ? "disabled" : ""} data-tooltip="${escapeHTML(t("Panel.ResetTip"))}"><i class="fa-solid fa-broom"></i></button>
+          <button type="button" data-action="clearLog" ${busy ? "disabled" : ""} data-tooltip="${escapeHTML(t("Panel.ClearLogTip"))}"><i class="fa-solid fa-eraser"></i></button>
         </div>
       </div>`;
   }

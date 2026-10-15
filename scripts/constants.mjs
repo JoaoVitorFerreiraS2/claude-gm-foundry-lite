@@ -16,11 +16,9 @@ export const MODELS_WITH_FALLBACK = new Set(["claude-opus-5-5", "claude-sonnet-5
 
 export const MAX_STEPS = 25;
 
-/** Per-request overrides: /claude! (strong) and /ia (quick). cli = `claude --model` alias, api = model id. */
+/** Per-request overrides: /claude! (strong) and /ia (quick). api = model id. */
 export const SHORTCUTS = {
   normal: {},
-  strong: { cli: "opus", api: "claude-opus-5-5", effort: "high" },
-  quick: { cli: "haiku", api: "claude-haiku-5-5", effort: "low" },
-  // Player requests that need real reasoning (level-up choices).
-  playerDeep: { cli: "sonnet", api: "claude-sonnet-5-5", effort: "medium" }
+  strong: { api: "claude-opus-5-5", effort: "high" },
+  quick: { api: "claude-haiku-5-5", effort: "low" }
 };

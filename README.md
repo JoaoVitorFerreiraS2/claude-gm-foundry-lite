@@ -1,38 +1,41 @@
 # Claude GM Lite
 
-Versão **gratuita e limitada** do Claude GM, um módulo para **Foundry VTT** (v13–v14, testado no dnd5e) que deixa o Mestre conversar com o [Claude](https://claude.com) no chat do Foundry para consultar e ajustar o mundo aberto.
+[English](README.md) | [Português (Brasil)](README.pt-BR.md)
 
-## O que ela faz
+A **free, limited** version of Claude GM, a **Foundry VTT** module (v13–v14, tested with dnd5e) that lets the GM talk to [Claude](https://claude.com) in the Foundry chat to look up and adjust the open world. The interface is available in **English and Brazilian Portuguese**, and Claude replies in the language you write in.
 
-- **Chat:** `/claude <pedido>` (modelo padrão), `/claude! <pedido>` (modelo mais forte) e `/ia <pedido>` (rápido e barato).
-- **Ferramentas incluídas:** buscar documentos e ler fichas (com CA, modificadores e CDs calculados), consultar e importar de compêndios, buscar nos diários, ver o chat da sessão, rolar dados, enviar mensagens e criar ou editar documentos.
-- **Aprovação:** cada alteração pode pedir a sua confirmação antes de ser gravada.
-- **Desfazer:** `/claude desfazer` reverte o que o Claude criou ou alterou.
-- **Painel** com histórico, botões nas fichas e no HUD do token, fila de pedidos e `/claude parar`.
-- **Jogadores (opcional):** podem tirar dúvidas sobre a própria ficha, em modo somente leitura.
+## What it does
 
-## O que fica de fora (versão completa)
+- **Chat:** `/claude <request>` (default model), `/claude! <request>` (stronger model) and `/ai <request>` (fast and cheap).
+- **Included tools:** search documents and read sheets (with computed AC, modifiers and DCs), browse and import from compendiums, search journals, read the session chat log, roll dice, send chat messages, and create or edit documents.
+- **Approval:** every change can ask for your confirmation before it is saved.
+- **Undo:** `/claude undo` reverts what Claude created or changed.
+- **Panel** with history, buttons on sheets and on the token HUD, a request queue and `/claude stop`.
+- **Players (optional):** they can ask questions about their own character sheet, read-only.
+- Every command works in English and Portuguese (`undo`/`desfazer`, `stop`/`parar`, `summary`/`resumo`, `queue`/`fila`...). Type `/claude help` for the list.
 
-Esta versão usa apenas a **API da Anthropic** e não inclui: ponte com o Claude Code, cartas entre jogadores e NPCs, quadro de investigação, integração com Obsidian, facções, criação de cenas e tokens, combate, tesouro e lojas, clima e efeitos visuais, calendário e scripts. A versão completa não é pública.
+## What is left out (full version)
 
-## Instalação
+This version uses only the **Anthropic API**. It does not include: the Claude Code bridge, letters between players and NPCs, the investigation board, Obsidian integration, factions, scene and token creation, combat, treasure and shops, weather and visual effects, calendar, and scripts. The full version is not public.
 
-1. Copie esta pasta para `Data/modules/claude-gm-lite` no seu Foundry (o nome da pasta precisa ser `claude-gm-lite`).
-2. Ative **Claude GM Lite** em **Gerenciar Módulos** no seu mundo.
-3. Em **Configurações → Claude GM Lite**, cole sua chave da API da Anthropic. Ela fica salva só no navegador do Mestre e nunca é enviada aos jogadores.
+## Installation
 
-O uso da API é cobrado pela Anthropic. Para gastar menos, use `/ia` em tarefas simples e `/claude reset` ao trocar de assunto.
+1. Copy this folder to `Data/modules/claude-gm-lite` in your Foundry (the folder name must be `claude-gm-lite`).
+2. Enable **Claude GM Lite** in **Manage Modules** in your world.
+3. In **Settings → Claude GM Lite**, paste your Anthropic API key. It is stored only in the GM's browser and never sent to players.
 
-## Licença
+API usage is billed by Anthropic. To spend less, use `/ai` for simple tasks and `/claude reset` when you change topic.
 
-[MIT](LICENSE). O SDK da Anthropic incluído em `vendor/` mantém a licença original.
+## License
 
-## Autor
+[MIT](LICENSE). The Anthropic SDK bundled in `vendor/` keeps its original license.
+
+## Author
 
 João Vitor Ferreira ([@JoaoVitorFerreiraS2](https://github.com/JoaoVitorFerreiraS2)).
 
-## Ferramentas utilizadas
+## Tools used
 
-- [Claude Code](https://claude.com/claude-code): desenvolvimento do módulo.
-- [Foundry VTT](https://foundryvtt.com): plataforma.
-- [SDK da Anthropic](https://github.com/anthropics/anthropic-sdk-typescript): chamadas à API (em `vendor/`).
+- [Claude Code](https://claude.com/claude-code): development of the module.
+- [Foundry VTT](https://foundryvtt.com): platform.
+- [Anthropic SDK](https://github.com/anthropics/anthropic-sdk-typescript): API calls (in `vendor/`).

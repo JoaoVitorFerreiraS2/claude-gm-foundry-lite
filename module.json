@@ -1,7 +1,7 @@
 {
     "id": "claude-gm-lite",
     "title": "Claude GM Lite",
-    "description": "Versão limitada e gratuita do Claude GM: converse com o Claude (API da Anthropic) no chat do Foundry para consultar o mundo, buscar em compêndios, rolar dados e editar documentos.",
+    "description": "Free, limited version of Claude GM: chat with Claude (Anthropic API) in Foundry to look up the world, search compendiums, roll dice and edit documents. English and Brazilian Portuguese.",
     "version": "0.5.0",
     "authors": [
         {

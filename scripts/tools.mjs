@@ -5,8 +5,7 @@
  */
 import { MODULE_ID } from "./constants.mjs";
 import { record, snapshotBefore } from "./undo.mjs";
-import { integrationTools } from "./integrations.mjs";
-import { letterTools } from "./letters.mjs";
+import { t } from "./i18n.mjs";
 
 const { escapeHTML, flattenObject, getProperty, fromUuid, getDocumentClass } = foundry.utils;
 
@@ -27,25 +26,9 @@ function canSee(doc, user) {
 }
 
 /** The only tools a player request gets: their own sheets, journals shared with them, and the rules. */
-const PLAYER_TOOLS = new Set(["get_my_characters", "get_document", "search_rules", "search_journal_text",
-  "get_level_up_options", "search_class_spells"]);
+const PLAYER_TOOLS = new Set(["get_my_characters", "get_document", "search_compendiums", "search_journal_text"]);
 
 const docLabel = doc => `${doc.documentName} "${doc.name ?? doc.id}"`;
-
-/**
- * Obsidian link: when Claude sets flags.claude-gm.note (the note's path inside the vault),
- * stamp when it was synced so later "what changed in the notes?" questions can be answered.
- * Works on nested data or on flat dot-path changes.
- */
-function stampNoteSync(data) {
-  if ( !data ) return data;
-  const flat = flattenObject(data);
-  const hasNote = Object.keys(flat).some(k => k === `flags.${MODULE_ID}.note`);
-  if ( !hasNote ) return data;
-  if ( Object.keys(data).some(k => k.includes(".")) ) data[`flags.${MODULE_ID}.syncedAt`] = Date.now();
-  else foundry.utils.setProperty(data, `flags.${MODULE_ID}.syncedAt`, Date.now());
-  return data;
-}
 
 const WORLD_TYPES = [
   "Actor", "Item", "JournalEntry", "Scene", "Macro", "RollTable", "Playlist",
@@ -64,14 +47,14 @@ function truncate(value) {
   if ( json.length <= MAX_RESULT_CHARS ) return value;
   return {
     truncated: true,
-    note: `Resultado com ${json.length} caracteres foi cortado. Use o parâmetro "fields" para pedir apenas os campos necessários.`,
+    note: `The result had ${json.length} characters and was cut off. Use the "fields" parameter to request only the fields you need.`,
     partial: json.slice(0, MAX_RESULT_CHARS)
   };
 }
 
 async function resolve(uuid) {
   const doc = await fromUuid(uuid);
-  if ( !doc ) throw new Error(`Documento não encontrado: ${uuid}`);
+  if ( !doc ) throw new Error(`Document not found: ${uuid}`);
   return doc;
 }
 
@@ -99,13 +82,13 @@ function summarize(doc) {
 export async function approve(title, bodyHTML, {always=false}={}) {
   if ( !always && !game.settings.get(MODULE_ID, "confirmChanges") ) return true;
   const ok = await foundry.applications.api.DialogV2.confirm({
-    window: { title: `${game.i18n.localize("CLAUDEGM.Confirm.Title")}: ${title}` },
+    window: { title: `${t("Confirm.Title")}: ${title}` },
     content: `<div class="claude-gm-confirm">${bodyHTML}</div>`,
     position: { width: 560 },
     rejectClose: false,
     modal: true
   });
-  if ( ok !== true ) throw new Error(game.i18n.localize("CLAUDEGM.Confirm.Declined"));
+  if ( ok !== true ) throw new Error(t("Confirm.Declined"));
   return true;
 }
 
@@ -121,7 +104,7 @@ const expand = data => foundry.utils.expandObject(data ?? {});
 async function resolveActor(uuid) {
   const doc = await resolve(uuid);
   const actor = doc.documentName === "Actor" ? doc : doc.actor;
-  if ( !actor ) throw new Error(`${uuid} não é um ator nem um token com ator.`);
+  if ( !actor ) throw new Error(`${uuid} is neither an actor nor a token with an actor.`);
   return actor;
 }
 
@@ -168,7 +151,7 @@ function normalizeActivities(data) {
     if ( key?.startsWith("-=") ) { out[key] = act; continue; } // deletion of an activity
     if ( !act || (typeof act !== "object") ) continue;
     if ( act.type && !types[act.type] ) {
-      throw new Error(`Atividade com tipo inválido "${act.type}". Tipos válidos: ${Object.keys(types).join(", ")}.`);
+      throw new Error(`Activity with invalid type "${act.type}". Valid types: ${Object.keys(types).join(", ")}.`);
     }
     const id = ID_PATTERN.test(act._id ?? "") ? act._id : (ID_PATTERN.test(key ?? "") ? key : foundry.utils.randomID());
     out[id] = { ...act, _id: id };
@@ -184,7 +167,7 @@ function shapeOf(value, depth=0) {
     if ( depth > 4 ) return "{…}";
     return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, shapeOf(v, depth + 1)]));
   }
-  return typeof value === "string" ? `string (ex.: "${value.slice(0, 40)}")` : `${typeof value} (ex.: ${JSON.stringify(value)})`;
+  return typeof value === "string" ? `string (e.g. "${value.slice(0, 40)}")` : `${typeof value} (e.g. ${JSON.stringify(value)})`;
 }
 
 /** Walk a DataModel schema into {path: description} pairs. */
@@ -196,7 +179,7 @@ function describeField(field, path, out, depth=0) {
     return;
   }
   if ( field.element?.documentName ) {
-    out[path] = `EmbeddedCollection<${field.element.documentName}> (crie com parent_uuid)`;
+    out[path] = `EmbeddedCollection<${field.element.documentName}> (create with parent_uuid)`;
     return;
   }
   if ( field.element ) {
@@ -222,11 +205,11 @@ function describeField(field, path, out, depth=0) {
 const TOOLS = {
 
   get_my_characters: {
-    description: "Lista os personagens que pertencem ao jogador que está perguntando (nome, uuid, classe, nível). Comece por aqui e depois use get_document no uuid com fields.",
+    description: "Lists the characters owned by the player who is asking (name, uuid, class, level). Start here, then use get_document on the uuid with fields.",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
     playerOnly: true,
     async run(_input, ctx) {
-      if ( !ctx.user ) throw new Error("Só para perguntas de jogadores.");
+      if ( !ctx.user ) throw new Error("Only for player questions.");
       const owned = game.actors.filter(a => a.testUserPermission(ctx.user, "OWNER"));
       return owned.map(a => ({
         uuid: a.uuid, name: a.name, type: a.type, assigned: ctx.user.character?.id === a.id,
@@ -237,11 +220,11 @@ const TOOLS = {
   },
 
   get_world_overview: {
-    description: "Visão geral do mundo atual: sistema de jogo, versão do Foundry, cena ativa, usuários, combate e contagem de documentos por tipo. Use no início quando precisar se orientar.",
+    description: "Overview of the current world: game system, Foundry version, active scene, users, combat and document counts by type. Use it at the start when you need to get your bearings.",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
     async run() {
       const counts = {};
-      for ( const t of WORLD_TYPES ) counts[t] = game.collections.get(t)?.size ?? 0;
+      for ( const type of WORLD_TYPES ) counts[type] = game.collections.get(type)?.size ?? 0;
       const scene = game.scenes.active;
       return {
         world: { id: game.world.id, title: game.world.title },
@@ -253,29 +236,29 @@ const TOOLS = {
           id: u.id, name: u.name, isGM: u.isGM, active: u.active, character: u.character?.uuid ?? null
         })),
         combat: game.combat ? { uuid: game.combat.uuid, round: game.combat.round, turn: game.combat.turn } : null,
-        documentTypes: Object.fromEntries(WORLD_TYPES.map(t => [t, game.documentTypes?.[t] ?? []])),
+        documentTypes: Object.fromEntries(WORLD_TYPES.map(type => [type, game.documentTypes?.[type] ?? []])),
         counts
       };
     }
   },
 
   search_documents: {
-    description: "Procura documentos do mundo por tipo e, opcionalmente, por parte do nome (ignora acentos e maiúsculas), subtipo do sistema ou pasta. Retorna uuid, nome, tipo e pasta.",
+    description: "Searches world documents by type and, optionally, by part of the name (ignores accents and case), system subtype or folder. Returns uuid, name, type and folder.",
     input_schema: {
       type: "object",
       properties: {
         document_type: { type: "string", enum: WORLD_TYPES },
-        query: { type: "string", description: "Trecho do nome a procurar." },
-        subtype: { type: "string", description: "Subtipo do sistema, ex.: npc, character, weapon, spell." },
-        folder: { type: "string", description: "Trecho do nome da pasta." },
-        limit: { type: "integer", minimum: 1, maximum: 500, description: "Padrão 50." }
+        query: { type: "string", description: "Part of the name to look for." },
+        subtype: { type: "string", description: "System subtype, e.g. npc, character, weapon, spell." },
+        folder: { type: "string", description: "Part of the folder name." },
+        limit: { type: "integer", minimum: 1, maximum: 500, description: "Default 50." }
       },
       required: ["document_type"],
       additionalProperties: false
     },
     async run({ document_type, query, subtype, folder, limit=50 }, ctx) {
       const collection = game.collections.get(document_type);
-      if ( !collection ) throw new Error(`Tipo sem coleção no mundo: ${document_type}`);
+      if ( !collection ) throw new Error(`Type has no world collection: ${document_type}`);
       const q = normalize(query);
       const f = normalize(folder);
       const matches = collection.filter(d => {
@@ -290,10 +273,10 @@ const TOOLS = {
   },
 
   list_compendiums: {
-    description: "Lista os compêndios disponíveis (do sistema, de módulos e do mundo) com id, nome, tipo de documento e quantidade de entradas.",
+    description: "Lists the available compendiums (from the system, modules and the world) with id, name, document type and number of entries.",
     input_schema: {
       type: "object",
-      properties: { document_type: { type: "string", description: "Filtra por tipo, ex.: Actor, Item, JournalEntry." } },
+      properties: { document_type: { type: "string", description: "Filter by type, e.g. Actor, Item, JournalEntry." } },
       additionalProperties: false
     },
     async run({ document_type }, ctx) {
@@ -310,27 +293,27 @@ const TOOLS = {
   },
 
   search_compendiums: {
-    description: "Procura entradas nos compêndios (ex.: monstros, magias, itens do SRD) por parte do nome (ignora acentos), subtipo ou compêndio. Retorna uuid, nome, tipo e compêndio; use get_document no uuid para ver a ficha completa e import_from_compendium para trazer ao mundo.",
+    description: "Searches compendium entries (e.g. SRD monsters, spells, items) by part of the name (ignores accents), subtype or compendium. Returns uuid, name, type and compendium; use get_document on the uuid to see the full sheet and import_from_compendium to bring it into the world.",
     input_schema: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Trecho do nome, ex.: veteran, bola de fogo." },
+        query: { type: "string", description: "Part of the name, e.g. veteran, fireball." },
         document_type: { type: "string", description: "Actor, Item, JournalEntry, RollTable, Scene, Macro..." },
-        subtype: { type: "string", description: "Subtipo do sistema, ex.: npc, spell, weapon." },
-        packs: { type: "array", items: { type: "string" }, description: "Ids de compêndios para restringir a busca." },
-        limit: { type: "integer", minimum: 1, maximum: 200, description: "Padrão 30." }
+        subtype: { type: "string", description: "System subtype, e.g. npc, spell, weapon." },
+        packs: { type: "array", items: { type: "string" }, description: "Compendium ids to restrict the search." },
+        limit: { type: "integer", minimum: 1, maximum: 200, description: "Default 30." }
       },
       additionalProperties: false
     },
     async run({ query, document_type, subtype, packs, limit=30 }, ctx) {
-      if ( !query && !subtype ) throw new Error("Informe query ou subtype.");
+      if ( !query && !subtype ) throw new Error("Provide query or subtype.");
       const q = normalize(query);
       const results = [];
       let total = 0;
       for ( const pack of game.packs ) {
         if ( document_type && (pack.documentName !== document_type) ) continue;
         if ( packs?.length && !packs.includes(pack.collection) ) continue;
-        if ( ctx.user && !pack.testUserPermission(ctx.user, "OBSERVER") ) continue;
+        if ( ctx.user && !(PLAYER_PACK_TYPES.has(pack.documentName) && pack.testUserPermission(ctx.user, "OBSERVER")) ) continue;
         const index = await pack.getIndex({ fields: INDEX_FIELDS[pack.documentName] ?? [] });
         for ( const entry of index ) {
           if ( q && !normalize(entry.name).includes(q) ) continue;
@@ -356,7 +339,7 @@ const TOOLS = {
   },
 
   import_from_compendium: {
-    description: "Traz documentos de compêndios para o mundo, opcionalmente já modificados. Use para criar coisas baseadas em conteúdo existente (ex.: NPC baseado na ficha do Veterano, com outro nome e biografia) em vez de montar a ficha do zero. Com parent_uuid, o item/efeito é adicionado a um ator. changes usa caminhos com ponto, como em update_documents.",
+    description: "Brings compendium documents into the world, optionally already modified. Use it to create things based on existing content (e.g. an NPC based on the Veteran sheet, with another name and biography) instead of building the sheet from scratch. With parent_uuid, the item/effect is added to an actor. changes uses dot paths, as in update_documents.",
     input_schema: {
       type: "object",
       properties: {
@@ -366,10 +349,10 @@ const TOOLS = {
           items: {
             type: "object",
             properties: {
-              uuid: { type: "string", description: "UUID da entrada no compêndio (Compendium....)." },
-              changes: { type: "object", description: "Alterações aplicadas antes de criar, ex.: {\"name\": \"Capitão Dorn\"}." },
-              folder: { type: "string", description: "Nome ou UUID de uma pasta existente para o documento." },
-              parent_uuid: { type: "string", description: "Ator (ou outro documento) que vai receber o item." }
+              uuid: { type: "string", description: "UUID of the compendium entry (Compendium....)." },
+              changes: { type: "object", description: "Changes applied before creating, e.g. {\"name\": \"Captain Dorn\"}." },
+              folder: { type: "string", description: "Name or UUID of an existing folder for the document." },
+              parent_uuid: { type: "string", description: "Actor (or other document) that will receive the item." }
             },
             required: ["uuid"]
           }
@@ -381,7 +364,7 @@ const TOOLS = {
     async run({ imports }) {
       const sources = await Promise.all(imports.map(i => resolve(i.uuid)));
       sources.forEach((s, i) => {
-        if ( !s.pack ) throw new Error(`${imports[i].uuid} não é uma entrada de compêndio; use create_documents.`);
+        if ( !s.pack ) throw new Error(`${imports[i].uuid} is not a compendium entry; use create_documents.`);
       });
       const preview = imports.map((imp, i) => {
         const target = imp.parent_uuid ? ` → ${escapeHTML(imp.parent_uuid)}` : "";
@@ -390,7 +373,7 @@ const TOOLS = {
           ? section(`${escapeHTML(sources[i].documentName)}: ${escapeHTML(sources[i].name)}${target}`, changes, imports.length === 1)
           : `<p><b>${escapeHTML(sources[i].documentName)}: ${escapeHTML(sources[i].name)}${target}</b></p>`;
       }).join("");
-      await approve(`importar ${imports.length} documento(s) de compêndio`, preview);
+      await approve(t("Confirm.Import", { count: imports.length }), preview);
 
       const results = [];
       for ( const [i, imp] of imports.entries() ) {
@@ -401,26 +384,26 @@ const TOOLS = {
           const data = source.toObject();
           delete data._id;
           foundry.utils.setProperty(data, "_stats.compendiumSource", source.uuid);
-          if ( imp.changes ) foundry.utils.mergeObject(data, normalizeActivities(stampNoteSync(foundry.utils.expandObject(imp.changes))));
+          if ( imp.changes ) foundry.utils.mergeObject(data, normalizeActivities(foundry.utils.expandObject(imp.changes)));
           [created] = await parent.createEmbeddedDocuments(source.documentName, [data]);
         } else {
           const collection = game.collections.get(source.documentName);
-          if ( !collection ) throw new Error(`Não dá para importar ${source.documentName} direto no mundo.`);
+          if ( !collection ) throw new Error(`${source.documentName} cannot be imported directly into the world.`);
           const data = collection.fromCompendium(source);
           if ( imp.changes ) {
-            const changes = stampNoteSync(foundry.utils.expandObject(imp.changes));
+            const changes = foundry.utils.expandObject(imp.changes);
             if ( source.documentName === "Actor" ) syncPrototypeTokenName(changes, source.name);
             foundry.utils.mergeObject(data, changes);
           }
           if ( imp.folder ) {
             const folder = findFolder(imp.folder, source.documentName);
-            if ( !folder ) throw new Error(`Pasta "${imp.folder}" de ${source.documentName} não existe; crie-a antes com create_documents.`);
+            if ( !folder ) throw new Error(`Folder "${imp.folder}" of ${source.documentName} does not exist; create it first with create_documents.`);
             data.folder = folder.id;
           }
           created = await getDocumentClass(source.documentName).create(data);
         }
         if ( !created ) {
-          results.push({ source: source.uuid, error: "Criação cancelada pelo sistema ou por outro módulo." });
+          results.push({ source: source.uuid, error: "Creation was cancelled by the system or by another module." });
           continue;
         }
         record({ kind: "create", uuid: created.uuid, label: docLabel(created) });
@@ -436,12 +419,12 @@ const TOOLS = {
   },
 
   get_document: {
-    description: "Lê os dados de um documento pelo UUID (ex.: Actor.abc, Actor.abc.Item.def, Scene.x.Token.y, Compendium...). Coleções embutidas vêm resumidas (uuid/nome/tipo) a menos que include_embedded seja true. Use fields para ler só alguns caminhos (ex.: system.attributes.hp); nesse modo também vêm os valores calculados pelo sistema (derived), como CA, HP máximo e modificadores.",
+    description: "Reads a document's data by UUID (e.g. Actor.abc, Actor.abc.Item.def, Scene.x.Token.y, Compendium...). Embedded collections come summarized (uuid/name/type) unless include_embedded is true. Use fields to read only some paths (e.g. system.attributes.hp); in that mode the values computed by the system (derived), such as AC, max HP and modifiers, come back too.",
     input_schema: {
       type: "object",
       properties: {
         uuid: { type: "string" },
-        fields: { type: "array", items: { type: "string" }, description: "Caminhos com ponto a retornar." },
+        fields: { type: "array", items: { type: "string" }, description: "Dot paths to return." },
         include_embedded: { type: "boolean" }
       },
       required: ["uuid"],
@@ -449,7 +432,7 @@ const TOOLS = {
     },
     async run({ uuid, fields, include_embedded=false }, ctx) {
       const doc = await resolve(uuid);
-      if ( !canSee(doc, ctx.user) ) throw new Error("Este jogador não tem permissão para ver esse documento.");
+      if ( !canSee(doc, ctx.user) ) throw new Error("This player does not have permission to see that document.");
       const data = doc.toObject();
       if ( fields?.length ) {
         // Source values are what update_documents changes; derived values are what the sheet shows
@@ -479,11 +462,11 @@ const TOOLS = {
   },
 
   describe_schema: {
-    description: "Lista os campos (caminho -> tipo, opções e valor inicial) de um tipo de documento e, se informado, do subtipo (ex.: Actor/npc, Item/weapon, ou tipos de módulos como Actor/add_Edit_My_Thigs_DnD.faccao). Para tipos de módulos que guardam dados em flags, mostra também a estrutura das flags de uma ficha existente. Use antes de criar documentos ou quando não souber o caminho de um campo.",
+    description: "Lists the fields (path -> type, choices and initial value) of a document type and, if given, of the subtype (e.g. Actor/npc, Item/weapon, or module-added types such as Actor/<module-id>.<type>). For module types that keep their data in flags, it also shows the flags structure of an existing sheet. Use it before creating documents or when you do not know a field's path.",
     input_schema: {
       type: "object",
       properties: {
-        document_type: { type: "string", description: "Ex.: Actor, Item, JournalEntryPage, Token, ActiveEffect, Scene." },
+        document_type: { type: "string", description: "E.g. Actor, Item, JournalEntryPage, Token, ActiveEffect, Scene." },
         subtype: { type: "string" }
       },
       required: ["document_type"],
@@ -491,27 +474,27 @@ const TOOLS = {
     },
     async run({ document_type, subtype }) {
       const cls = getDocumentClass(document_type);
-      if ( !cls ) throw new Error(`Tipo de documento desconhecido: ${document_type}`);
+      if ( !cls ) throw new Error(`Unknown document type: ${document_type}`);
       const fields = {};
       describeField(cls.schema, "", fields);
       let flagsExample;
       if ( subtype ) {
         const model = CONFIG[document_type]?.dataModels?.[subtype];
         if ( model ) describeField(model.schema, "system", fields);
-        else fields.system = "sem DataModel registrado para este subtipo";
+        else fields.system = "no DataModel registered for this subtype";
         // Types added by modules often keep their data in flags: show the structure of an existing one.
         const example = game.collections.get(document_type)?.find(d => (d.type === subtype) && !foundry.utils.isEmpty(d.flags));
         if ( example ) flagsExample = { from: example.uuid, flags: shapeOf(example.toObject().flags) };
       }
       return {
         document_type, subtype: subtype ?? null, availableSubtypes: game.documentTypes?.[document_type] ?? [], fields,
-        ...(flagsExample ? { flagsExample, note: "Os dados deste tipo ficam em flags; altere com caminhos como flags.<módulo>.<campo>." } : {})
+        ...(flagsExample ? { flagsExample, note: "This type keeps its data in flags; change it with paths like flags.<module>.<field>." } : {})
       };
     }
   },
 
   update_documents: {
-    description: "Atualiza um ou mais documentos. Cada item tem uuid e changes (objeto com caminhos em ponto, ex.: {\"system.attributes.hp.value\": 10, \"name\": \"Novo nome\"}). Para remover uma chave use \"-=chave\": null. Retorna os valores gravados para você conferir.",
+    description: "Updates one or more documents. Each item has uuid and changes (an object with dot paths, e.g. {\"system.attributes.hp.value\": 10, \"name\": \"New name\"}). To remove a key use \"-=key\": null. Returns the stored values so you can check them.",
     input_schema: {
       type: "object",
       properties: {
@@ -536,14 +519,13 @@ const TOOLS = {
           return `<tr><td><code>${escapeHTML(k)}</code></td><td>${escapeHTML(JSON.stringify(before) ?? "—")}</td><td>${escapeHTML(JSON.stringify(v))}</td></tr>`;
         }).join("");
         return section(escapeHTML(docs[i].name ?? docs[i].uuid),
-          `<table><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr>${rows}</table>`, updates.length === 1);
+          `<table><tr><th>${t("Confirm.Field")}</th><th>${t("Confirm.Before")}</th><th>${t("Confirm.After")}</th></tr>${rows}</table>`, updates.length === 1);
       }).join("");
-      await approve(`atualizar ${docs.length} documento(s)`, preview);
+      await approve(t("Confirm.Update", { count: docs.length }), preview);
 
       const results = [];
       for ( const [i, u] of updates.entries() ) {
         const doc = docs[i];
-        stampNoteSync(u.changes);
         if ( (doc.documentName === "Item") && JSON.stringify(u.changes).includes("activities") ) {
           u.changes = normalizeActivities(foundry.utils.expandObject(u.changes));
         }
@@ -567,7 +549,7 @@ const TOOLS = {
   },
 
   create_documents: {
-    description: "Cria documentos. Para documentos do mundo informe document_type (Actor, Item, JournalEntry, Scene, Macro, RollTable, Folder...) e data. Para documentos embutidos (Item em um Actor, JournalEntryPage em um JournalEntry, Token/Tile/AmbientLight/Note em uma Scene, ActiveEffect) informe também parent_uuid.",
+    description: "Creates documents. For world documents give document_type (Actor, Item, JournalEntry, Scene, Macro, RollTable, Folder...) and data. For embedded documents (Item in an Actor, JournalEntryPage in a JournalEntry, Token/Tile/AmbientLight/Note in a Scene, ActiveEffect) also give parent_uuid.",
     input_schema: {
       type: "object",
       properties: {
@@ -590,12 +572,14 @@ const TOOLS = {
     },
     async run({ documents }) {
       // Normalize and validate everything first, so a bad entry fails the whole call before anything is created.
-      for ( const d of documents ) d.data = normalizeActivities(stampNoteSync(expand(d.data)));
+      for ( const d of documents ) d.data = normalizeActivities(expand(d.data));
       const preview = documents.map(d => section(
-        `${escapeHTML(d.document_type)}${d.parent_uuid ? ` em ${escapeHTML(d.parent_uuid)}` : ""}: ${escapeHTML(d.data?.name ?? "")}`,
+        d.parent_uuid
+          ? t("Confirm.DocIn", { type: escapeHTML(d.document_type), parent: escapeHTML(d.parent_uuid), name: escapeHTML(d.data?.name ?? "") })
+          : `${escapeHTML(d.document_type)}: ${escapeHTML(d.data?.name ?? "")}`,
         pre(d.data), documents.length === 1
       )).join("");
-      await approve(`criar ${documents.length} documento(s)`, preview);
+      await approve(t("Confirm.Create", { count: documents.length }), preview);
 
       const results = [];
       for ( const d of documents ) {
@@ -605,11 +589,11 @@ const TOOLS = {
           [created] = await parent.createEmbeddedDocuments(d.document_type, [d.data]);
         } else {
           const cls = getDocumentClass(d.document_type);
-          if ( !cls ) throw new Error(`Tipo de documento desconhecido: ${d.document_type}`);
+          if ( !cls ) throw new Error(`Unknown document type: ${d.document_type}`);
           created = await cls.create(d.data);
         }
         if ( created ) record({ kind: "create", uuid: created.uuid, label: docLabel(created) });
-        results.push(created ? summarize(created) : { error: "Criação cancelada pelo sistema ou por outro módulo." });
+        results.push(created ? summarize(created) : { error: "Creation was cancelled by the system or by another module." });
       }
       return { results };
     }
@@ -617,15 +601,15 @@ const TOOLS = {
 
 
   send_chat_message: {
-    description: "Publica uma mensagem no chat do Foundry (narração, descrição, aviso). Por padrão vai para todos; use gm_only para sussurrar só ao Mestre. O conteúdo é HTML.",
+    description: "Posts a message to the Foundry chat (narration, description, notice). By default it goes to everyone; use gm_only to whisper to the GM only. The content is HTML.",
     input_schema: {
       type: "object",
       properties: {
         content: { type: "string" },
-        speaker_alias: { type: "string", description: "Nome exibido como autor, ex.: Narrador." },
-        speaker_actor_uuid: { type: "string", description: "Falar como este ator." },
+        speaker_alias: { type: "string", description: "Name shown as the author, e.g. Narrator." },
+        speaker_actor_uuid: { type: "string", description: "Speak as this actor." },
         gm_only: { type: "boolean" },
-        language: { type: "string", description: "Idioma do Polyglot (id de list_languages). Exige speaker_actor_uuid; só quem conhece o idioma entende." }
+        language: { type: "string", description: "Polyglot language id (e.g. \"elvish\"). Requires speaker_actor_uuid; only those who know the language understand it." }
       },
       required: ["content"],
       additionalProperties: false
@@ -633,10 +617,10 @@ const TOOLS = {
     async run({ content, speaker_alias, speaker_actor_uuid, gm_only=false, language }) {
       const actor = speaker_actor_uuid ? await resolveActor(speaker_actor_uuid) : null;
       if ( language ) {
-        if ( !game.modules.get("polyglot")?.active ) throw new Error("O Polyglot não está ativo.");
-        if ( !actor ) throw new Error("Para falar em um idioma, informe speaker_actor_uuid.");
+        if ( !game.modules.get("polyglot")?.active ) throw new Error("The Polyglot module is not active.");
+        if ( !actor ) throw new Error("To speak in a language, provide speaker_actor_uuid.");
       }
-      if ( !gm_only ) await approve("enviar mensagem pública", foundry.utils.cleanHTML(content));
+      if ( !gm_only ) await approve(t("Confirm.PublicMessage"), foundry.utils.cleanHTML(content));
       const speaker = ChatMessage.implementation.getSpeaker({ actor, alias: speaker_alias });
       const data = {
         content,
@@ -648,19 +632,19 @@ const TOOLS = {
         data.flags = { polyglot: { language } };
       }
       const msg = await ChatMessage.implementation.create(data);
-      if ( msg ) record({ kind: "create", uuid: msg.uuid, label: "mensagem no chat" });
+      if ( msg ) record({ kind: "create", uuid: msg.uuid, label: t("Undo.ChatMessage") });
       return { uuid: msg?.uuid ?? null };
     }
   },
 
 
   get_chat_log: {
-    description: "Lê as mensagens do chat do mundo (inclusive rolagens e sussurros) das últimas horas, em ordem cronológica, para resumir a sessão ou entender o que aconteceu.",
+    description: "Reads the world chat messages (including rolls and whispers) from the last hours, in chronological order, to summarize the session or understand what happened.",
     input_schema: {
       type: "object",
       properties: {
-        hours: { type: "number", description: "Janela de tempo para trás. Padrão 6." },
-        limit: { type: "integer", minimum: 1, maximum: 1000, description: "Máximo de mensagens (as mais recentes). Padrão 400." }
+        hours: { type: "number", description: "How many hours back to look. Default 6." },
+        limit: { type: "integer", minimum: 1, maximum: 1000, description: "Maximum number of messages (the most recent). Default 400." }
       },
       additionalProperties: false
     },
@@ -696,12 +680,12 @@ const TOOLS = {
 
 
   search_journal_text: {
-    description: "Procura um texto dentro das páginas de todos os diários do mundo (não só no nome). Retorna diário, página e um trecho em volta de cada ocorrência.",
+    description: "Searches for text inside the pages of all world journals (not just the name). Returns journal, page and an excerpt around each occurrence.",
     input_schema: {
       type: "object",
       properties: {
         query: { type: "string" },
-        limit: { type: "integer", minimum: 1, maximum: 100, description: "Padrão 20." }
+        limit: { type: "integer", minimum: 1, maximum: 100, description: "Default 20." }
       },
       required: ["query"],
       additionalProperties: false
@@ -727,14 +711,14 @@ const TOOLS = {
   },
 
   roll_dice: {
-    description: "Rola dados no Foundry e mostra no chat (ex.: \"1d20+5\", \"8d6\"). Use para testes de NPCs, danos, tabelas aleatórias improvisadas. Por padrão a rolagem fica só para o Mestre.",
+    description: "Rolls dice in Foundry and shows them in the chat (e.g. \"1d20+5\", \"8d6\"). Use it for NPC checks, damage, improvised random tables. By default the roll is visible to the GM only.",
     input_schema: {
       type: "object",
       properties: {
         formula: { type: "string" },
-        flavor: { type: "string", description: "Descrição, ex.: \"Percepção do guarda\"." },
-        speaker_actor_uuid: { type: "string", description: "Rolar em nome deste ator (pode usar @atributos dele na fórmula)." },
-        public: { type: "boolean", description: "Mostrar para todos. Padrão false (só o Mestre)." }
+        flavor: { type: "string", description: "Description, e.g. \"Guard's Perception\"." },
+        speaker_actor_uuid: { type: "string", description: "Roll on behalf of this actor (its @attributes can be used in the formula)." },
+        public: { type: "boolean", description: "Show to everyone. Default false (GM only)." }
       },
       required: ["formula"],
       additionalProperties: false
@@ -743,7 +727,7 @@ const TOOLS = {
       const actor = speaker_actor_uuid ? await resolveActor(speaker_actor_uuid) : null;
       const roll = await new Roll(formula, actor?.getRollData() ?? {}).evaluate();
       const msg = await roll.toMessage({ flavor, speaker: ChatMessage.implementation.getSpeaker({ actor }) }, visibility(!isPublic));
-      if ( msg ) record({ kind: "create", uuid: msg.uuid, label: `rolagem ${formula}` });
+      if ( msg ) record({ kind: "create", uuid: msg.uuid, label: t("Undo.Roll", { formula }) });
       return { formula: roll.formula, total: roll.total, dice: roll.dice.map(d => ({ faces: d.faces, results: d.results.map(r => r.result) })) };
     }
   },
@@ -755,33 +739,24 @@ const TOOLS = {
 
 };
 
-Object.assign(TOOLS, integrationTools({ resolve, resolveActor, approve, normalize, htmlToText }), letterTools);
-
 /**
  * Tools enabled for the current settings, in a stable order (keeps the prompt cache warm).
  * With a player user only the read-only player tools are offered.
  */
-/** Ferramentas da versão limitada: consultar o mundo, rolar dados, importar de compêndios e editar documentos. */
+/** Tools of the Lite version: query the world, roll dice, import from compendiums and edit documents. */
 const LITE_TOOLS = new Set(["get_my_characters", "get_world_overview", "search_documents", "list_compendiums", "search_compendiums",
   "import_from_compendium", "get_document", "describe_schema", "update_documents", "create_documents", "send_chat_message",
-  "get_chat_log", "search_journal_text", "search_rules", "roll_dice"]);
+  "get_chat_log", "search_journal_text", "roll_dice"]);
 
 export function getEnabledTools({ user }={}) {
-  return Object.entries(TOOLS).filter(([name, t]) => {
+  return Object.entries(TOOLS).filter(([name, tool]) => {
     if ( !LITE_TOOLS.has(name) ) return false;
-    if ( t.requiresSetting && !game.settings.get(MODULE_ID, t.requiresSetting) ) return false;
-    return user ? PLAYER_TOOLS.has(name) : !t.playerOnly;
+    return user ? PLAYER_TOOLS.has(name) : !tool.playerOnly;
   });
 }
 
-/** Definitions of the tools a player request may use (the bridge serves these on its player endpoint). */
-export function playerToolDefinitions() {
-  return Object.entries(TOOLS).filter(([name]) => PLAYER_TOOLS.has(name))
-    .map(([name, t]) => ({ name, description: t.description, input_schema: t.input_schema }));
-}
-
 export function toolDefinitions(ctx={}) {
-  return getEnabledTools(ctx).map(([name, t]) => ({ name, description: t.description, input_schema: t.input_schema }));
+  return getEnabledTools(ctx).map(([name, tool]) => ({ name, description: tool.description, input_schema: tool.input_schema }));
 }
 
 /**
@@ -790,7 +765,7 @@ export function toolDefinitions(ctx={}) {
  */
 export async function runTool(name, input, ctx={}) {
   const tool = getEnabledTools(ctx).find(([n]) => n === name)?.[1];
-  if ( !tool ) throw new Error(`Ferramenta desconhecida ou não permitida: ${name}`);
+  if ( !tool ) throw new Error(`Unknown or disallowed tool: ${name}`);
   // Foundry and systems report validation problems as notifications that only the GM would see;
   // capture them so Claude gets the exact message and can fix its data.
   const captured = [];
@@ -798,7 +773,7 @@ export async function runTool(name, input, ctx={}) {
   const original = { error: notes.error, warn: notes.warn };
   for ( const level of ["error", "warn"] ) {
     notes[level] = function(message, options) {
-      captured.push(`${level === "error" ? "erro" : "aviso"}: ${String(message?.message ?? message)}`);
+      captured.push(`${level}: ${String(message?.message ?? message)}`);
       return original[level].call(this, message, options);
     };
   }
@@ -806,12 +781,12 @@ export async function runTool(name, input, ctx={}) {
     const result = await tool.run(input ?? {}, ctx);
     if ( !captured.length ) return result;
     Hooks.callAll("claudeGM.toolNotices", name, captured);
-    const notices = { foundryNotices: captured, hint: "O Foundry mostrou estes avisos durante a ferramenta; confira se algo deixou de ser gravado." };
+    const notices = { foundryNotices: captured, hint: "Foundry showed these notices while the tool ran; check whether something failed to be stored." };
     return (result && (typeof result === "object") && !Array.isArray(result)) ? { ...result, ...notices } : { result, ...notices };
   } catch (err) {
     if ( captured.length ) {
       Hooks.callAll("claudeGM.toolNotices", name, captured);
-      err.message = `${err.message} | Avisos do Foundry: ${captured.join(" | ")}`;
+      err.message = `${err.message} | Foundry notices: ${captured.join(" | ")}`;
     }
     throw err;
   } finally {
