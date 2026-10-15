@@ -1,0 +1,38 @@
+{
+    "id": "claude-gm-lite",
+    "title": "Claude GM Lite",
+    "description": "Versão limitada e gratuita do Claude GM: converse com o Claude (API da Anthropic) no chat do Foundry para consultar o mundo, buscar em compêndios, rolar dados e editar documentos.",
+    "version": "0.5.0",
+    "authors": [
+        {
+            "name": "João Vitor Ferreira (McLovin)",
+            "url": "https://github.com/JoaoVitorFerreiraS2"
+        }
+    ],
+    "compatibility": {
+        "minimum": "13",
+        "verified": "14"
+    },
+    "esmodules": [
+        "scripts/main.mjs"
+    ],
+    "styles": [
+        "styles/claude-gm.css"
+    ],
+    "languages": [
+        {
+            "lang": "pt-BR",
+            "name": "Português (Brasil)",
+            "path": "lang/pt-BR.json"
+        },
+        {
+            "lang": "en",
+            "name": "English",
+            "path": "lang/en.json"
+        }
+    ],
+    "socket": true,
+    "url": "https://github.com/JoaoVitorFerreiraS2/claude-gm-foundry-lite",
+    "bugs": "https://github.com/JoaoVitorFerreiraS2/claude-gm-foundry-lite/issues",
+    "license": "LICENSE"
+}
