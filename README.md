@@ -31,6 +31,8 @@ O uso da API é cobrado pela Anthropic. Para gastar menos, use `/ia` em tarefas 
 
 João Vitor Ferreira ([@JoaoVitorFerreiraS2](https://github.com/JoaoVitorFerreiraS2)).
 
----
+## Ferramentas utilizadas
 
-Este projeto foi feito inteiramente com o [Claude](https://claude.com) (Claude Code).
+- [Claude Code](https://claude.com/claude-code): desenvolvimento do módulo.
+- [Foundry VTT](https://foundryvtt.com): plataforma.
+- [SDK da Anthropic](https://github.com/anthropics/anthropic-sdk-typescript): chamadas à API (em `vendor/`).
