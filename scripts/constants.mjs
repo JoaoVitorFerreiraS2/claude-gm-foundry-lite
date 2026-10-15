@@ -6,12 +6,7 @@ export const MODELS = {
   "claude-haiku-5-5": "Claude Haiku 5.5"
 };
 
-export const BACKENDS = {
-  api: "API da Anthropic (chave própria)"
-};
 
-/** Values passed to `claude --model`; empty = the CLI's own default. */
-export const CLI_MODELS = { "": "Padrão do Claude Code", opus: "Opus", sonnet: "Sonnet", haiku: "Haiku" };
 
 export const EFFORTS = { low: "low", medium: "medium", high: "high", xhigh: "xhigh", max: "max" };
 

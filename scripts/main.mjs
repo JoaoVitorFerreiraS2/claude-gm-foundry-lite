@@ -1,8 +1,7 @@
-import { BACKENDS, CLI_MODELS, EFFORTS, MODELS, MODULE_ID, SHORTCUTS } from "./constants.mjs";
+import { EFFORTS, MODELS, MODULE_ID, SHORTCUTS } from "./constants.mjs";
 import { ask, cancelRequest, currentContext, describeError, isBusy, resetConversation } from "./claude.mjs";
 import {
-  askViaBridge, cancelBridgeRequest, connectBridge, isBridgeBusy, isBridgeConnected, remoteLog, resetBridgeConversation,
-  sendHello
+  askViaBridge, cancelBridgeRequest, connectBridge, isBridgeBusy, remoteLog, resetBridgeConversation
 } from "./bridge-client.mjs";
 import { gmHelp, gmStatus, playerHelp } from "./help.mjs";
 import { summariesFor } from "./summary.mjs";
@@ -11,7 +10,7 @@ import { addClue, analysisRequest, BOARD_SYSTEM, BoardApp, boardJournal, removeC
 import { ClaudePanel } from "./panel.mjs";
 import { beginTurn, clearUndo, describeLast, endTurn, loadUndo, undoCount, undoLast } from "./undo.mjs";
 
-const useBridge = () => game.settings.get(MODULE_ID, "backend") === "bridge";
+const useBridge = () => false;
 const SOCKET = `module.${MODULE_ID}`;
 
 const { escapeHTML, cleanHTML } = foundry.utils;
@@ -31,13 +30,6 @@ Hooks.once("init", () => {
     ...data
   });
 
-  register("backend", { label: "Backend", scope: "client", type: String, choices: BACKENDS, default: "api" });
-
-  // Claude Code (local bridge)
-  register("bridgeUrl", {
-    label: "BridgeUrl", scope: "client", type: String, default: "ws://127.0.0.1:30123/ws", requiresReload: true
-  });
-  register("cliModel", { label: "CliModel", scope: "client", type: String, choices: CLI_MODELS, default: "" });
 
   // Anthropic API. Client scope: the key stays in the GM's browser and is never synced to players.
   register("apiKey", { label: "ApiKey", scope: "client", type: String, default: "" });
@@ -45,17 +37,8 @@ Hooks.once("init", () => {
   register("effort", { label: "Effort", scope: "client", type: String, choices: EFFORTS, default: "medium" });
 
   register("confirmChanges", { label: "Confirm", scope: "world", type: Boolean, default: true });
-  register("allowScript", {
-    label: "AllowScript", scope: "world", type: Boolean, default: false, onChange: () => sendHello()
-  });
   register("allowPlayers", { label: "AllowPlayers", scope: "world", type: Boolean, default: false });
   register("instructions", { label: "Instructions", scope: "world", type: String, default: "" });
-  register("notesPath", {
-    label: "NotesPath", scope: "world", type: String, default: "", onChange: () => sendHello()
-  });
-  register("playerNotesFolder", {
-    label: "PlayerNotesFolder", scope: "world", type: String, default: "", onChange: () => sendHello()
-  });
 });
 
 Hooks.once("ready", () => {
@@ -194,7 +177,7 @@ async function handleCommand(text, view=ChatView, mode="normal") {
   const lower = text.toLowerCase();
   if ( !text || ["ajuda", "help", "comandos"].includes(lower) ) return view.note(gmHelp());
   if ( ["status", "config", "estado"].includes(lower) ) {
-    return view.note(gmStatus({ bridgeConnected: isBridgeConnected(), undoCount: undoCount() }));
+    return view.note(gmStatus({ undoCount: undoCount() }));
   }
   if ( ["painel", "panel", "janela"].includes(lower) ) return ClaudePanel.toggle();
   if ( ["correio", "cartas"].includes(lower) ) return MailApp.open();

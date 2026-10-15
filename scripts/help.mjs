@@ -80,23 +80,17 @@ export function gmHelp() {
 
 /**
  * @param {object} state
- * @param {boolean} state.bridgeConnected
  * @param {number} state.undoCount
  */
-export function gmStatus({ bridgeConnected, undoCount }) {
+export function gmStatus({ undoCount }) {
   const get = key => game.settings.get(MODULE_ID, key);
-  const bridge = get("backend") === "bridge";
-  const notes = get("notesPath")?.trim();
   return `
 <h3>Claude GM — status</h3>
 <ul>
-  <li><b>Modo:</b> ${bridge ? `Claude Code (seu login) — modelo ${get("cliModel") || "padrão do Claude Code"}` : `API da Anthropic — ${get("model")}, esforço ${get("effort")}`}</li>
-  <li>${yes(bridgeConnected, "Ponte conectada", `Ponte desconectada${bridge ? " — rode bridge/iniciar-ponte.cmd" : " (necessária só para o Claude Code e o terminal)"}`)}</li>
-  ${bridge ? "" : `<li>${yes(Boolean(get("apiKey")?.trim()), "Chave da API configurada", "Sem chave da API")}</li>`}
-  <li>${yes(Boolean(notes), `Pasta de notas: <code>${foundry.utils.escapeHTML(notes ?? "")}</code>`, "Sem pasta de notas do Obsidian")}</li>
+  <li><b>Modo:</b> API da Anthropic — ${get("model")}, esforço ${get("effort")}</li>
+  <li>${yes(Boolean(get("apiKey")?.trim()), "Chave da API configurada", "Sem chave da API")}</li>
   <li>${yes(get("confirmChanges"), "Pede aprovação para alterações", "Alterações sem aprovação (exclusões, scripts e notas ainda pedem)")}</li>
   <li>${yes(get("allowPlayers"), "Jogadores podem perguntar sobre a própria ficha", "Jogadores não podem usar o Claude")}</li>
-  <li>${yes(get("allowScript"), "Execução de scripts permitida", "Execução de scripts desligada")}</li>
   <li><b>Desfazer:</b> ${undoCount} pedido(s) guardado(s)</li>
 </ul>`;
 }

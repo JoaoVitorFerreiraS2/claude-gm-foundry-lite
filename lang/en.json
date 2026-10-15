@@ -1,10 +1,4 @@
 {
-  "CLAUDEGM.Settings.Backend.Name": "How to reach Claude",
-  "CLAUDEGM.Settings.Backend.Hint": "Claude Code uses the claude CLI on your computer (your login/subscription) through the local bridge. API uses an Anthropic key, billed per use.",
-  "CLAUDEGM.Settings.BridgeUrl.Name": "Bridge address",
-  "CLAUDEGM.Settings.BridgeUrl.Hint": "Where the local bridge (bridge/iniciar-ponte.cmd) listens. Only change it if you changed the port.",
-  "CLAUDEGM.Settings.CliModel.Name": "Model (Claude Code)",
-  "CLAUDEGM.Settings.CliModel.Hint": "Model the claude CLI uses when you type /claude in chat.",
   "CLAUDEGM.Settings.ApiKey.Name": "Anthropic API key",
   "CLAUDEGM.Settings.ApiKey.Hint": "Your key (sk-ant-...). Stored only in this browser, never sent to players.",
   "CLAUDEGM.Settings.Model.Name": "Model",
@@ -13,8 +7,6 @@
   "CLAUDEGM.Settings.Effort.Hint": "More effort = more careful answers, but slower and more expensive.",
   "CLAUDEGM.Settings.Confirm.Name": "Confirm changes",
   "CLAUDEGM.Settings.Confirm.Hint": "Ask for approval before creating or updating documents and before posting public messages. Deletions and scripts always ask.",
-  "CLAUDEGM.Settings.AllowScript.Name": "Allow running code",
-  "CLAUDEGM.Settings.AllowScript.Hint": "Let Claude propose JavaScript for tasks the regular tools don't cover. Every script is shown and needs your approval.",
   "CLAUDEGM.Settings.Instructions.Name": "Extra instructions",
   "CLAUDEGM.Settings.Instructions.Hint": "Free text sent to Claude in every conversation (e.g. campaign tone, house rules).",
   "CLAUDEGM.GMOnly": "Only the GM can use /claude.",
@@ -30,10 +22,6 @@
   "CLAUDEGM.StepLimit": "(stopped after many steps; ask me to continue if needed)",
   "CLAUDEGM.Confirm.Title": "Claude wants to make changes",
   "CLAUDEGM.Confirm.Declined": "The GM declined this action.",
-  "CLAUDEGM.Settings.NotesPath.Name": "Notes folder (Obsidian)",
-  "CLAUDEGM.Settings.NotesPath.Hint": "Path to this world's Obsidian vault folder. Claude reads the notes and can edit them with your approval (with backups). Needs the bridge running. Empty = no access to notes.",
   "CLAUDEGM.Settings.AllowPlayers.Name": "Players can ask",
-  "CLAUDEGM.Settings.AllowPlayers.Hint": "Lets players use /claude for questions ABOUT THEIR OWN SHEET (abilities, spells, items, features and the rules that apply to them). Claude only reads characters the player owns plus rules; it refuses lore, monsters, NPCs and secrets; it changes nothing. Limit: 1 question every 15 s and 20 per hour per player. You see every question and answer.",
-  "CLAUDEGM.Settings.PlayerNotesFolder.Name": "Obsidian folder visible to players",
-  "CLAUDEGM.Settings.PlayerNotesFolder.Hint": "Vault subfolder (e.g. Players) with the characters' backstories. Players can only read notes in that folder; the rest of the vault stays secret. Empty = players don't read Obsidian. Needs the bridge running."
+  "CLAUDEGM.Settings.AllowPlayers.Hint": "Lets players use /claude for questions ABOUT THEIR OWN SHEET (abilities, spells, items, features and the rules that apply to them). Claude only reads characters the player owns plus rules; it refuses lore, monsters, NPCs and secrets; it changes nothing. Limit: 1 question every 15 s and 20 per hour per player. You see every question and answer."
 }

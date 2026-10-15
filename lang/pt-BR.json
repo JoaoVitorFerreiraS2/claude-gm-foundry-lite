@@ -1,10 +1,4 @@
 {
-  "CLAUDEGM.Settings.Backend.Name": "Como falar com o Claude",
-  "CLAUDEGM.Settings.Backend.Hint": "Claude Code usa o claude instalado no seu computador (seu login/assinatura) através da ponte local. API usa uma chave da Anthropic, cobrada por uso.",
-  "CLAUDEGM.Settings.BridgeUrl.Name": "Endereço da ponte",
-  "CLAUDEGM.Settings.BridgeUrl.Hint": "Onde a ponte local (bridge/iniciar-ponte.cmd) está ouvindo. Só mude se alterou a porta.",
-  "CLAUDEGM.Settings.CliModel.Name": "Modelo (Claude Code)",
-  "CLAUDEGM.Settings.CliModel.Hint": "Modelo usado pelo claude do terminal quando você usa /claude no chat.",
   "CLAUDEGM.Settings.ApiKey.Name": "Chave da API da Anthropic",
   "CLAUDEGM.Settings.ApiKey.Hint": "Sua chave (sk-ant-...). Fica salva só neste navegador, nunca é enviada aos jogadores.",
   "CLAUDEGM.Settings.Model.Name": "Modelo",
@@ -13,8 +7,6 @@
   "CLAUDEGM.Settings.Effort.Hint": "Mais esforço = respostas mais cuidadosas, porém mais lentas e caras.",
   "CLAUDEGM.Settings.Confirm.Name": "Confirmar alterações",
   "CLAUDEGM.Settings.Confirm.Hint": "Pede sua aprovação antes de criar ou alterar documentos e de enviar mensagens públicas. Exclusões e scripts sempre pedem confirmação.",
-  "CLAUDEGM.Settings.AllowScript.Name": "Permitir execução de código",
-  "CLAUDEGM.Settings.AllowScript.Hint": "Deixa o Claude propor scripts JavaScript para tarefas que as ferramentas normais não cobrem. Cada script é mostrado e precisa da sua aprovação.",
   "CLAUDEGM.Settings.Instructions.Name": "Instruções extras",
   "CLAUDEGM.Settings.Instructions.Hint": "Texto livre enviado ao Claude em toda conversa (ex.: tom da campanha, regras da casa).",
   "CLAUDEGM.GMOnly": "Somente o Mestre pode usar o /claude.",
@@ -30,10 +22,6 @@
   "CLAUDEGM.StepLimit": "(parei após muitas etapas; peça para continuar se precisar)",
   "CLAUDEGM.Confirm.Title": "Claude quer fazer alterações",
   "CLAUDEGM.Confirm.Declined": "O Mestre recusou esta ação.",
-  "CLAUDEGM.Settings.NotesPath.Name": "Pasta de notas (Obsidian)",
-  "CLAUDEGM.Settings.NotesPath.Hint": "Caminho da pasta do vault do Obsidian deste mundo, ex.: C:\\Users\\voce\\Documents\\Meu Vault. O Claude lê as notas e pode editá-las com sua aprovação (com backup). Precisa da ponte aberta. Vazio = sem acesso às notas.",
   "CLAUDEGM.Settings.AllowPlayers.Name": "Jogadores podem perguntar",
-  "CLAUDEGM.Settings.AllowPlayers.Hint": "Deixa os jogadores usarem /claude para dúvidas SOBRE A PRÓPRIA FICHA (atributos, magias, itens, habilidades e as regras que se aplicam a eles). O Claude só lê os personagens de que o jogador é dono e as regras; recusa perguntas sobre história, monstros, NPCs e segredos; não altera nada. Limite: 1 pergunta a cada 15 s e 20 por hora por jogador. Você vê todas as perguntas e respostas.",
-  "CLAUDEGM.Settings.PlayerNotesFolder.Name": "Pasta do Obsidian visível aos jogadores",
-  "CLAUDEGM.Settings.PlayerNotesFolder.Hint": "Subpasta do vault (ex.: Jogadores) com as histórias dos personagens. Os jogadores só conseguem ler as notas dessa pasta; o resto do vault continua secreto. Vazio = jogadores não leem o Obsidian. Precisa da ponte aberta."
+  "CLAUDEGM.Settings.AllowPlayers.Hint": "Deixa os jogadores usarem /claude para dúvidas SOBRE A PRÓPRIA FICHA (atributos, magias, itens, habilidades e as regras que se aplicam a eles). O Claude só lê os personagens de que o jogador é dono e as regras; recusa perguntas sobre história, monstros, NPCs e segredos; não altera nada. Limite: 1 pergunta a cada 15 s e 20 por hora por jogador. Você vê todas as perguntas e respostas."
 }
