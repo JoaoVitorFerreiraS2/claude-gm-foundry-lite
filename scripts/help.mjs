@@ -5,7 +5,7 @@
 import { MODULE_ID } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 
-const yes = (cond, on, off) => (cond ? `✅ ${on}` : `⬜ ${off}`);
+const yes = (cond, on, off) => (cond ? `[x] ${on}` : `[ ] ${off}`);
 
 export function gmHelp() {
   return t("Help.Gm");

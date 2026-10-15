@@ -105,6 +105,7 @@
   "CLAUDEGM.Summary.Speed": "Deslocamento",
   "CLAUDEGM.Summary.HitDice": "Dados de vida",
   "CLAUDEGM.Summary.DeathSaves": "Testes contra a morte",
+  "CLAUDEGM.Summary.DeathSaveCounts": "{success} sucessos · {failure} falhas",
   "CLAUDEGM.Summary.Exhaustion": "Exaustão",
   "CLAUDEGM.Summary.Conditions": "Condições",
   "CLAUDEGM.Summary.None": "nenhuma",

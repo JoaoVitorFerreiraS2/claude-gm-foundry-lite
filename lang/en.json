@@ -105,6 +105,7 @@
   "CLAUDEGM.Summary.Speed": "Speed",
   "CLAUDEGM.Summary.HitDice": "Hit dice",
   "CLAUDEGM.Summary.DeathSaves": "Death saves",
+  "CLAUDEGM.Summary.DeathSaveCounts": "{success} successes · {failure} failures",
   "CLAUDEGM.Summary.Exhaustion": "Exhaustion",
   "CLAUDEGM.Summary.Conditions": "Conditions",
   "CLAUDEGM.Summary.None": "none",

@@ -27,7 +27,7 @@ export function characterSummary(actor) {
   row(t("Summary.Initiative"), a.init?.total !== undefined ? (a.init.total >= 0 ? `+${a.init.total}` : a.init.total) : undefined);
   row(t("Summary.Speed"), a.movement?.walk ? `${a.movement.walk} ${a.movement.units ?? ""}`.trim() : undefined);
   if ( a.hd?.max ) row(t("Summary.HitDice"), `${a.hd.value}/${a.hd.max}`);
-  if ( (hp?.value === 0) && a.death ) row(t("Summary.DeathSaves"), `✅ ${a.death.success ?? 0} · ❌ ${a.death.failure ?? 0}`);
+  if ( (hp?.value === 0) && a.death ) row(t("Summary.DeathSaves"), t("Summary.DeathSaveCounts", { success: a.death.success ?? 0, failure: a.death.failure ?? 0 }));
   if ( a.exhaustion ) row(t("Summary.Exhaustion"), a.exhaustion);
 
   const conditions = [...(actor.statuses ?? [])].map(id => {
